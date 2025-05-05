@@ -12,5 +12,19 @@ services:
       - card-database-data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  tech-database:
+    image: postgres:15-alpine
+    container_name: tech-database
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=tech-database
+    ports:
+      - 7433:5432
+    volumes:
+      - tech-database-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
 volumes:
   card-database-data:
+  tech-database-data:
