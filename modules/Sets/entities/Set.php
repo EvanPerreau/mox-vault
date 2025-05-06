@@ -4,7 +4,6 @@ namespace Modules\Sets\entities;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Support\Str;
 use Modules\CommonBusinessException\exceptions\BadParameterException;
 
 /**
@@ -15,6 +14,10 @@ use Modules\CommonBusinessException\exceptions\BadParameterException;
 class Set extends Model
 {
     use HasFactory;
+
+    protected $connection = 'card';
+    public $timestamps = false;
+    protected $primaryKey = 'id';
 
     /**
      * The attributes that are mass assignable.
@@ -44,7 +47,7 @@ class Set extends Model
     public string $uuid {
         get => $this->attributes['id'];
         set(string $uuid) {
-            if (Str::length($uuid) === 0 || Str::isBlank($uuid)) {
+            if (strlen($uuid) === 0 || empty(trim($uuid))) {
                 throw new BadParameterException('uuid can\'t be empty');
             }
             $this->attributes['id'] = $uuid;
@@ -59,7 +62,7 @@ class Set extends Model
     public string $code {
         get => $this->attributes['code'];
         set(string $code) {
-            if (Str::length($code) === 0 || Str::isBlank($code)) {
+            if (strlen($code) === 0 || empty(trim($code))) {
                 throw new BadParameterException('code can\'t be empty');
             }
             $this->attributes['code'] = $code;
@@ -74,7 +77,7 @@ class Set extends Model
     public string $name {
         get => $this->attributes['name'];
         set(string $name) {
-            if (Str::length($name) === 0 || Str::isBlank($name)) {
+            if (strlen($name) === 0 || empty(trim($name))) {
                 throw new BadParameterException('name can\'t be empty');
             }
             $this->attributes['name'] = $name;
@@ -89,7 +92,7 @@ class Set extends Model
     public string $uri {
         get => $this->attributes['uri'];
         set(string $uri) {
-            if (Str::length($uri) === 0 || Str::isBlank($uri)) {
+            if (strlen($uri) === 0 || empty(trim($uri))) {
                 throw new BadParameterException('uri can\'t be empty');
             }
             $this->attributes['uri'] = $uri;
@@ -116,7 +119,7 @@ class Set extends Model
     public string $set_type {
         get => $this->attributes['set_type'];
         set(string $setType) {
-            if (Str::length($setType) === 0 || Str::isBlank($setType)) {
+            if (strlen($setType) === 0 || empty(trim($setType))) {
                 throw new BadParameterException('set_type can\'t be empty');
             }
             $this->attributes['set_type'] = $setType;
@@ -201,11 +204,11 @@ class Set extends Model
         string $released_at,
         string $set_type,
         int $card_count,
-        string $parent_set_code,
-        boolean $digital,
-        boolean $nonfoil_only,
-        boolean $foil_only,
-        string $icon_svg_uri
+        ?string $parent_set_code,
+        bool $digital,
+        bool $nonfoil_only,
+        bool $foil_only,
+        ?string $icon_svg_uri
     ): void {
         $this->uuid = $uuid;
         $this->code = $code;

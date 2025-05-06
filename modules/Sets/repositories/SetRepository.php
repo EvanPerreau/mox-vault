@@ -39,7 +39,7 @@ class SetRepository
      * @param SetDto $setDto Data transfer object containing set data
      * @return Set
      */
-    public function create(SetDto $setDto): Set
+    public function updateOrCreate(SetDto $setDto): Set
     {
         $set = new Set();
         $set->register(
@@ -61,13 +61,30 @@ class SetRepository
     }
 
     /**
-     * Create a new entity from an array of data.
+     * Create or update an entity from an array of data.
      *
      * @param array<string, mixed> $data
      * @return Set
      */
-    public function createFromArray(array $data): Set
+    public function updateOrCreateFromArray(array $data): Set
     {
-        return $this->create(SetDto::fromArray($data));
+        $setDto = SetDto::fromArray($data);
+
+        return Set::updateOrCreate(
+            ['id' => $setDto->uuid], // Critères de recherche
+            [
+                'code' => $setDto->code,
+                'name' => $setDto->name,
+                'uri' => $setDto->uri,
+                'released_at' => $setDto->released_at,
+                'set_type' => $setDto->set_type,
+                'card_count' => $setDto->card_count,
+                'parent_set_code' => $setDto->parent_set_code,
+                'digital' => $setDto->digital,
+                'nonfoil_only' => $setDto->nonfoil_only,
+                'foil_only' => $setDto->foil_only,
+                'icon_svg_uri' => $setDto->icon_svg_uri
+            ]
+        );
     }
 }
