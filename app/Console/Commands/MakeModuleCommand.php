@@ -64,6 +64,10 @@ class MakeModuleCommand extends Command
         'common' => [
             'directories' => ['helpers', 'dtos', 'contracts'],
             'description' => 'Shared tools, DTOs, contracts'
+        ],
+        'commands' => [
+            'directories' => ['commands'],
+            'description' => 'Contains Artisan console commands'
         ]
     ];
 
@@ -166,7 +170,7 @@ class MakeModuleCommand extends Command
         foreach ($types as $type) {
             $typeOptions[$type] = "<fg=green>{$type}</> - {$this->moduleTypes[$type]['description']}";
         }
-        
+
         $this->line('');
         $this->info('Select a module type:');
         $this->line('');
@@ -258,6 +262,77 @@ EOT;
         \$this->loadRoutesFrom(__DIR__ . '/routes/api.php');
 EOT;
                 break;
+            // Dans la méthode getServiceProviderStub, ajouter ce cas dans le switch :
+            case 'commands':
+                return <<<EOT
+<?php
+
+namespace Modules\\{$moduleName};
+
+use Illuminate\\Support\\ServiceProvider;
+
+/**
+ * Service provider for the {$moduleName} module.
+ *
+ * @package Modules\\{$moduleName}
+ */
+class {$moduleName}ServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any module services.
+     *
+     * @return void
+     */
+    public function register(): void
+    {
+        // Register module bindings
+    }
+
+    /**
+     * Bootstrap any module services.
+     *
+     * @return void
+     */
+    public function boot(): void
+    {
+        if (\$this->app->runningInConsole()) {
+            \$this->commands(\$this->getCommands());
+        }
+    }
+
+    /**
+     * Get all commands in the commands directory.
+     *
+     * @return array<int, string>
+     */
+    private function getCommands(): array
+    {
+        \$commandsPath = __DIR__ . '/commands';
+        \$namespace = 'Modules\\\\{$moduleName}\\\\commands\\\\';
+
+        if (!is_dir(\$commandsPath)) {
+            return [];
+        }
+
+        \$commands = [];
+        \$files = scandir(\$commandsPath);
+
+        foreach (\$files as \$file) {
+            if (\$file === '.' || \$file === '..') {
+                continue;
+            }
+
+            if (is_file(\$commandsPath . '/' . \$file) && pathinfo(\$file, PATHINFO_EXTENSION) === 'php') {
+                \$className = pathinfo(\$file, PATHINFO_FILENAME);
+                \$commands[] = \$namespace . \$className;
+            }
+        }
+
+        return \$commands;
+    }
+}
+EOT;
+                break;
         }
 
         // Close the class
@@ -303,6 +378,9 @@ EOT;
                 break;
             case 'common':
                 $this->createCommonFiles($moduleName, $moduleDir);
+                break;
+            case 'commands':
+                $this->createCommandsFiles($moduleName, $moduleDir);
                 break;
         }
     }
@@ -1139,5 +1217,163 @@ EOT;
 
         File::put($contractPath, $contractContent);
         $this->line("  <fg=green>✓</> Created contract: {$contractName}.php");
+    }
+
+    /**
+     * Create command files for the module.
+     *
+     * @param string $moduleName The name of the module
+     * @param string $moduleDir The directory of the module
+     * @return void
+     */
+    private function createCommandsFiles(string $moduleName, string $moduleDir): void
+    {
+        $this->line('');
+        $this->comment('Creating command files...');
+
+        // Create directories if they don't exist
+        if (!File::exists("{$moduleDir}/commands")) {
+            File::makeDirectory("{$moduleDir}/commands", 0755, true);
+        }
+
+        // Create example command
+        $commandName = $this->getSingularName($moduleName) . "Command";
+        $commandPath = "{$moduleDir}/commands/{$commandName}.php";
+
+        $commandContent = <<<EOT
+<?php
+
+namespace Modules\\{$moduleName}\\commands;
+
+use Illuminate\Console\Command;
+
+/**
+ * Example command for {$moduleName} module.
+ *
+ * @package Modules\\{$moduleName}\\commands
+ */
+class {$commandName} extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected \$signature = 'module:{$this->getRouteName($moduleName)}:run';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected \$description = 'Run {$moduleName} module command';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
+    public function handle(): int
+    {
+        \$this->info('Running {$moduleName} command...');
+
+        // Your command logic here
+
+        \$this->info('Command completed successfully!');
+        return Command::SUCCESS;
+    }
+}
+EOT;
+
+        File::put($commandPath, $commandContent);
+        $this->line("  <fg=green>✓</> Created command: {$commandName}.php");
+
+        // Update service provider to register commands
+        $this->updateServiceProviderForCommands($moduleName, $moduleDir);
+    }
+
+    /**
+     * Update service provider to register commands.
+     *
+     * @param string $moduleName The name of the module
+     * @param string $moduleDir The directory of the module
+     * @return void
+     */
+    private function updateServiceProviderForCommands(string $moduleName, string $moduleDir): void
+    {
+        $serviceProviderPath = "{$moduleDir}/{$moduleName}ServiceProvider.php";
+
+        if (File::exists($serviceProviderPath)) {
+            $content = File::get($serviceProviderPath);
+
+            // Add boot method to register commands if it doesn't already have command registration
+            if (!str_contains($content, 'if ($this->app->runningInConsole())')) {
+                $bootMethod = <<<'EOT'
+    /**
+     * Bootstrap any module services.
+     *
+     * @return void
+     */
+    public function boot(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands($this->getCommands());
+        }
+    }
+
+    /**
+     * Get all commands in the commands directory.
+     *
+     * @return array<int, string>
+     */
+    private function getCommands(): array
+    {
+        $commandsPath = __DIR__ . '/commands';
+        $namespace = 'Modules\\' . basename(__DIR__) . '\\commands\\';
+
+        if (!is_dir($commandsPath)) {
+            return [];
+        }
+
+        $commands = [];
+        $files = scandir($commandsPath);
+
+        foreach ($files as $file) {
+            if ($file === '.' || $file === '..') {
+                continue;
+            }
+
+            if (is_file($commandsPath . '/' . $file) && pathinfo($file, PATHINFO_EXTENSION) === 'php') {
+                $className = pathinfo($file, PATHINFO_FILENAME);
+                $commands[] = $namespace . $className;
+            }
+        }
+
+        return $commands;
+    }
+EOT;
+
+                // Replace existing boot method or add new one
+                if (preg_match('/public function boot\(\).*?\{.*?\}/s', $content)) {
+                    $content = preg_replace('/public function boot\(\).*?\{.*?\}/s', $bootMethod, $content);
+                } else {
+                    // Add before the last closing brace
+                    $content = preg_replace('/}(\s*)$/', $bootMethod . "\n}$1", $content);
+                }
+
+                File::put($serviceProviderPath, $content);
+                $this->line("  <fg=green>✓</> Updated service provider to register commands");
+            }
+        }
     }
 }
