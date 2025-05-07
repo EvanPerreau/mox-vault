@@ -2,7 +2,9 @@
 
 namespace Modules\UpdateSetsCommand;
 
+use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\ServiceProvider;
+use Modules\UpdateSetsCommand\commands\UpdateSetsCommand;
 
 /**
  * Service provider for the UpdateSetsCommand module.
@@ -31,6 +33,8 @@ class UpdateSetsCommandServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands($this->getCommands());
         }
+
+        Schedule::command('update:sets')->dailyAt('00:00');
     }
 
     /**
